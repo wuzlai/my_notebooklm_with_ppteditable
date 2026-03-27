@@ -18,6 +18,22 @@ def get_client() -> genai.Client:
     return _client
 
 
+def _extract_text_response(response) -> str:
+    """Best-effort extraction for text responses across SDK variants."""
+    text = getattr(response, "text", None)
+    if text is not None:
+        return text
+
+    candidates = getattr(response, "candidates", None) or []
+    for candidate in candidates:
+        content = getattr(candidate, "content", None)
+        parts = getattr(content, "parts", None) or []
+        text_chunks = [getattr(part, "text", None) for part in parts if getattr(part, "text", None)]
+        if text_chunks:
+            return "\n".join(text_chunks)
+    raise ValueError("Gemini response does not contain text content")
+
+
 def generate_text(model: str, system_prompt: str, user_prompt: str) -> str:
     client = get_client()
     response = client.models.generate_content(
@@ -28,7 +44,7 @@ def generate_text(model: str, system_prompt: str, user_prompt: str) -> str:
             temperature=0.7,
         ),
     )
-    return response.text
+    return _extract_text_response(response)
 
 
 def generate_text_with_images(
@@ -51,7 +67,7 @@ def generate_text_with_images(
             temperature=0.3,
         ),
     )
-    return response.text
+    return _extract_text_response(response)
 
 
 def generate_image(model: str, prompt: str) -> bytes | None:
@@ -63,7 +79,12 @@ def generate_image(model: str, prompt: str) -> bytes | None:
             response_modalities=["IMAGE", "TEXT"],
         ),
     )
-    for part in response.candidates[0].content.parts:
-        if part.inline_data is not None:
-            return part.inline_data.data
+    candidates = getattr(response, "candidates", None) or []
+    if not candidates:
+        return None
+    parts = getattr(candidates[0].content, "parts", None) or []
+    for part in parts:
+        inline_data = getattr(part, "inline_data", None)
+        if inline_data is not None:
+            return inline_data.data
     return None

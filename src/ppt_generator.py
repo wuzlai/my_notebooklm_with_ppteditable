@@ -285,12 +285,24 @@ def add_data_card(slide, left, top, width, height, value, label,
 
 def _extract_code(response_text: str) -> str:
     """Extract ONLY the build_slide function from the AI response."""
-    # Step 1: extract from markdown code block if present
-    match = re.search(r'```python\s*\n(.*?)```', response_text, re.DOTALL)
-    code = match.group(1).strip() if match else response_text.strip()
+    # Step 1: extract from markdown code block if present (```python / ```py / plain ```)
+    code_blocks = re.findall(
+        r'```(?:python|py)?\s*\n(.*?)```',
+        response_text,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if code_blocks:
+        # Prefer a block containing build_slide, fallback to the first block
+        preferred = next(
+            (blk for blk in code_blocks if re.search(r'def\s+build_slide\s*\(', blk)),
+            code_blocks[0],
+        )
+        code = preferred.strip()
+    else:
+        code = response_text.strip()
 
     # Step 2: find the build_slide function and extract only it
-    match = re.search(r'(def build_slide\(slide\):.*)', code, re.DOTALL)
+    match = re.search(r'(def\s+build_slide\s*\(\s*slide[^)]*\)\s*:.*)', code, re.DOTALL)
     if not match:
         return code
 
@@ -363,13 +375,24 @@ prs.save(OUTPUT_PATH)
 
 def _rename_func(code: str, new_name: str) -> str:
     """Rename build_slide -> new_name in the code."""
-    return code.replace("def build_slide(slide)", f"def {new_name}(slide)")
+    renamed, count = re.subn(
+        r'def\s+build_slide\s*\(\s*slide[^)]*\)\s*:',
+        f'def {new_name}(slide):',
+        code,
+        count=1,
+    )
+    if count == 0:
+        raise ValueError("未找到函数定义: def build_slide(slide)")
+    return renamed
 
 
 def build_single_slide_pptx(slide_code: str, output_path: str) -> tuple[bool, str]:
     """Generate a single-slide PPTX from one slide's code. Returns (success, error)."""
     func_name = "build_slide_1"
-    renamed = _rename_func(slide_code, func_name)
+    try:
+        renamed = _rename_func(slide_code, func_name)
+    except ValueError as e:
+        return False, str(e)
     script = _make_pptx_script([(func_name, renamed)], output_path)
 
     # Save assembled script for debugging (use _full suffix to avoid overwriting code file)
@@ -390,7 +413,10 @@ def build_full_pptx(slide_codes: dict[int, str], output_path: str) -> tuple[bool
     func_pairs = []
     for page_num in sorted(slide_codes.keys()):
         func_name = f"build_slide_{page_num}"
-        renamed = _rename_func(slide_codes[page_num], func_name)
+        try:
+            renamed = _rename_func(slide_codes[page_num], func_name)
+        except ValueError as e:
+            return False, f"第 {page_num} 页代码无效: {e}"
         func_pairs.append((func_name, renamed))
 
     script = _make_pptx_script(func_pairs, output_path)

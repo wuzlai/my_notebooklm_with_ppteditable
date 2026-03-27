@@ -1,4 +1,5 @@
 import os
+import re
 import streamlit as st
 from src.optimizer import optimize_document, parse_slides
 from src.image_generator import generate_slide_image
@@ -179,12 +180,16 @@ if current_opt:
                 img_full = os.path.join(img_dir, img_file)
                 with col:
                     st.image(img_full, caption=img_file, use_container_width=True)
-                    page_idx = idx  # index into slides list
-                    if page_idx < len(slides):
+                    page_num = None
+                    num_match = re.match(r"^(\d+)", img_file)
+                    if num_match:
+                        page_num = int(num_match.group(1))
+
+                    if page_num and 1 <= page_num <= len(slides):
                         with st.expander(f"重新生成 {img_file}"):
                             custom_prompt = st.text_area(
                                 "自定义该页内容（可选）",
-                                value=slides[page_idx],
+                                value=slides[page_num - 1],
                                 key=f"regen_{idx}",
                                 height=150,
                             )
@@ -193,7 +198,7 @@ if current_opt:
                                     new_bytes = generate_slide_image(
                                         custom_prompt,
                                         current_style,
-                                        page_idx + 1,
+                                        page_num,
                                         len(slides),
                                         model=image_model,
                                     )
@@ -210,7 +215,7 @@ st.header("Step 4: 导出")
 
 has_images = (
     os.path.exists(img_dir)
-    and any(f.endswith((".jpg", ".png")) for f in os.listdir(img_dir))
+    and any(f.lower().endswith((".jpg", ".jpeg", ".png")) for f in os.listdir(img_dir))
 )
 
 tab_pdf, tab_ppt = st.tabs(["合并为 PDF", "生成 PPT"])
