@@ -3,6 +3,8 @@
 import os
 import re
 import traceback
+from typing import Any
+from pptx.util import Pt
 
 from src.gemini_client import generate_text_with_images
 from src.prompts import PPT_CODE_GEN_SYSTEM_PROMPT, PPT_CODE_GEN_USER_PROMPT
@@ -403,15 +405,158 @@ def build_full_pptx(slide_codes: dict[int, str], output_path: str) -> tuple[bool
     return _exec_script(script)
 
 
+# ── Safe Proxy Enhancement ──────────────────────────────────────────
+
+def sanitize_text(text: Any) -> Any:
+    if not isinstance(text, str):
+        return text
+    
+    def is_safe(c):
+        cp = ord(c)
+        # 1. Basic ASCII (0x20-0x7E) plus common whitespace
+        if 0x20 <= cp <= 0x7E or c in "\n\r\t":
+            return True
+        # 2. CJK Unified Ideographs (Common Chinese characters)
+        if 0x4E00 <= cp <= 0x9FFF:
+            return True
+        # 3. CJK Symbols and Punctuation (Chinese full-width punctuation)
+        if 0x3000 <= cp <= 0x303F:
+            return True
+        # 4. Hiragana/Katakana (Japanese)
+        if 0x3040 <= cp <= 0x30FF:
+            return True
+        # 5. Full-width alphanumeric (0xFF01-0xFFEE)
+        if 0xFF00 <= cp <= 0xFFEF:
+            return True
+        return False
+
+    # Filter text to keep only safe characters
+    return "".join(c for c in text if is_safe(c))
+
+class SafeProxy:
+    """A proxy object to intercept and fix common python-pptx AI errors."""
+    def __init__(self, target):
+        object.__setattr__(self, "_target", target)
+
+    def __getattr__(self, name):
+        if name == "background" and hasattr(self._target, "fill"):
+            return self._target.fill.background
+        attr = getattr(self._target, name)
+        if hasattr(attr, "__dict__") or "pptx." in str(type(attr)):
+            return SafeProxy(attr)
+        return attr
+
+    def __setattr__(self, name, value):
+        # Sanitize text assignments to prevent XML corruption
+        if name == "text" and isinstance(value, str):
+            value = sanitize_text(value)
+        setattr(self._target, name, value)
+
+    def __call__(self, *args, **kwargs):
+        res = self._target(*args, **kwargs)
+        if hasattr(res, "__dict__") or "pptx." in str(type(res)):
+            return SafeProxy(res)
+        return res
+
+    def __getitem__(self, key):
+        res = self._target[key]
+        if hasattr(res, "__dict__") or "pptx." in str(type(res)):
+            return SafeProxy(res)
+        return res
+
+    def __len__(self):
+        return len(self._target)
+
+    def __iter__(self):
+        for item in self._target:
+            if hasattr(item, "__dict__") or "pptx." in str(type(item)):
+                yield SafeProxy(item)
+            else:
+                yield item
+
+class ShapesProxy(SafeProxy):
+    def _to_emu(self, val):
+        if isinstance(val, float) and 0 < val < 50:
+            from pptx.util import Inches
+            return Inches(val)
+        return val
+
+    def add_shape(self, shape_type, left, top, width, height):
+        from pptx.enum.shapes import MSO_SHAPE
+        left, top, width, height = map(self._to_emu, [left, top, width, height])
+        if shape_type == MSO_SHAPE.ROUNDED_RECTANGULAR_CALLOUT:
+            shape_type = MSO_SHAPE.ROUNDED_RECTANGLE
+        try:
+            return SafeProxy(self._target.add_shape(shape_type, left, top, width, height))
+        except Exception:
+            return SafeProxy(self._target.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height))
+
+    def add_textbox(self, left, top, width, height):
+        left, top, width, height = map(self._to_emu, [left, top, width, height])
+        return SafeProxy(self._target.add_textbox(left, top, width, height))
+
+    def add_table(self, rows, cols, left, top, width, height):
+        left, top, width, height = map(self._to_emu, [left, top, width, height])
+        return SafeProxy(self._target.add_table(rows, cols, left, top, width, height))
+
+    def add_chart(self, chart_type, left, top, width, height, chart_data):
+        left, top, width, height = map(self._to_emu, [left, top, width, height])
+        try:
+            return SafeProxy(self._target.add_chart(chart_type, left, top, width, height, chart_data))
+        except Exception:
+            # Fallback: Instead of crashing, add a placeholder rectangle
+            print("ERROR: add_chart failed, using placeholder rectangle")
+            from pptx.dml.color import RGBColor
+            dummy = self._target.add_shape(1, left, top, width, height)
+            dummy.fill.solid()
+            dummy.fill.fore_color.rgb = RGBColor(200, 200, 200)
+            return SafeProxy(dummy)
+
+    def add_connector(self, connector_type, x1, y1, x2, y2):
+        x1, y1, x2, y2 = map(self._to_emu, [x1, y1, x2, y2])
+        from pptx.enum.shapes import MSO_SHAPE
+        left = min(x1, x2)
+        top = min(y1, y2)
+        width = max(Pt(1), abs(x2 - x1))
+        height = max(Pt(1), abs(y2 - y1))
+        # Use RECTANGLE as a safe fallback for lines to avoid connector relationship issues
+        return SafeProxy(self._target.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height))
+
+class SlideProxy(SafeProxy):
+    def __getattr__(self, name):
+        if name == "shapes":
+            return ShapesProxy(self._target.shapes)
+        return super().__getattr__(name)
+
+    # ... other methods if needed ...
+
+class PptxProxy:
+    def __init__(self, real_prs):
+        object.__setattr__(self, "_real", real_prs)
+        object.__setattr__(self, "slides", SlidesListProxy(real_prs.slides))
+    def __getattr__(self, name): return getattr(self._real, name)
+    def __setattr__(self, name, value): setattr(self._real, name, value)
+    def save(self, *args, **kwargs): return self._real.save(*args, **kwargs)
+
+class SlidesListProxy:
+    def __init__(self, real_slides): self._real = real_slides
+    def add_slide(self, layout): return SlideProxy(self._real.add_slide(layout))
+    def __len__(self): return len(self._real)
+    def __getitem__(self, idx): return SlideProxy(self._real[idx])
+    def __getattr__(self, name): return getattr(self._real, name)
+
+
 def _patch_common_errors(code: str) -> str:
     """Auto-fix common mistakes the AI makes in generated python-pptx code."""
     # .line.background() -> .line.fill.background()
     code = re.sub(r'\.line\.background\(\)', '.line.fill.background()', code)
     # .line.no_fill() -> .line.fill.background()
     code = re.sub(r'\.line\.no_fill\(\)', '.line.fill.background()', code)
+    
     # MSO_CONNECTOR not imported -> add import if used
     if 'MSO_CONNECTOR' in code and 'from pptx.enum.shapes import MSO_CONNECTOR' not in code:
         code = 'from pptx.enum.shapes import MSO_CONNECTOR\n' + code
+    
     # Replace invalid MSO_SHAPE members with ROUNDED_RECTANGLE
     from pptx.enum.shapes import MSO_SHAPE
     _valid_shapes = set(MSO_SHAPE.__members__.keys())
@@ -425,13 +570,63 @@ def _patch_common_errors(code: str) -> str:
 
 
 def _exec_script(script: str) -> tuple[bool, str]:
-    """Execute a generated pptx script in-process. Returns (success, error)."""
+    """Execute a generated pptx script in-process using proxy and fallback. Returns (success, error)."""
+    import importlib
     script = _patch_common_errors(script)
-    try:
-        exec(compile(script, "<pptx_gen>", "exec"), {"__builtins__": __builtins__})
-        return True, ""
-    except Exception:
-        return False, traceback.format_exc()
+    
+    attempts = 0
+    max_attempts = 3
+    current_script = script
+    
+    while attempts < max_attempts:
+        try:
+            # 1. Strip standard Presentation import to allow Proxy injection
+            script_to_run = re.sub(r'from pptx import Presentation', '# removed to allow proxy', current_script)
+            
+            # Prepare execution environment
+            from pptx import Presentation as RealPresentation
+
+            def ProxyPresentation(*args, **kwargs):
+                return PptxProxy(RealPresentation(*args, **kwargs))
+
+            exec_globals = {
+                "__builtins__": __builtins__, 
+                "Presentation": ProxyPresentation,
+                "re": re, 
+                "traceback": traceback
+            }
+            exec(compile(script_to_run, "<pptx_gen>", "exec"), exec_globals)
+            return True, ""
+            
+        except Exception as e:
+            attempts += 1
+            err_msg = traceback.format_exc()
+            
+            # ── Dynamic Fallback Patches ──
+            if "AttributeError" in err_msg:
+                if "'LineFormat' object has no attribute 'background'" in err_msg:
+                    current_script = current_script.replace(".line.background()", ".line.fill.background()")
+                    continue
+            
+            if "NameError" in err_msg:
+                match = re.search(r"name '(\w+)' is not defined", str(e))
+                if match:
+                    missing_name = match.group(1)
+                    found = False
+                    for modname in ["pptx.enum.shapes", "pptx.enum.text", "pptx.enum.chart", "pptx.util"]:
+                        try:
+                            mod = importlib.import_module(modname)
+                            if hasattr(mod, missing_name):
+                                current_script = f"from {modname} import {missing_name}\n" + current_script
+                                found = True
+                                break
+                        except ImportError: continue
+                    if found: continue
+            
+            if attempts >= max_attempts:
+                return False, traceback.format_exc()
+    
+    return False, "Failed after max retries"
 
 
 # ── Slide code persistence ──
