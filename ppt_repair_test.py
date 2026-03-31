@@ -123,35 +123,50 @@ def test_project_ppt_generation(project_name: str):
 
     print(f"Found {len(img_files)} images. Starting per-page generation...")
 
-    prs = Presentation()
-    prs.slide_width = Inches(13.333)
-    prs.slide_height = Inches(7.5)
+    # Import the proxy presentation factory from production
+    from src.ppt_generator import _exec_script, ProxyPresentation
 
     execution_globals = {}
+    from src.ppt_generator import _SCRIPT_HEADER
     exec(_SCRIPT_HEADER, execution_globals)
     execution_globals.update({
         'Inches': Inches, 'Pt': Pt, 'Emu': Emu,
         'RGBColor': RGBColor, 'PP_ALIGN': PP_ALIGN, 
         'MSO_SHAPE': MSO_SHAPE, 'MSO_CONNECTOR': MSO_CONNECTOR,
-        'XL_CHART_TYPE': XL_CHART_TYPE, 'XL_LABEL_POSITION': XL_LABEL_POSITION
+        'XL_CHART_TYPE': XL_CHART_TYPE, 'XL_LABEL_POSITION': XL_LABEL_POSITION,
+        'CategoryChartData': ppt_generator.CategoryChartData
     })
 
     results = []
     
+    # Create the main master presentation using Proxy
+    # Note: We won't set a global background for the whole PRS, but per-slide
+    main_prs = Presentation() 
+    main_prs.slide_width = Inches(13.333)
+    main_prs.slide_height = Inches(7.5)
+
     for i, img_file in enumerate(img_files):
         page_num = i + 1
-        img_path = os.path.join(img_dir, img_file)
+        img_path = os.path.abspath(os.path.join(img_dir, img_file))
         print(f"Processing Page {page_num}...")
         
         code = load_slide_code(proj_dir, page_num)
         if not code:
             print(f"  Requesting AI for Page {page_num}...")
+            # Use real generation logic
+            from src.ppt_generator import generate_slide_code
             code = generate_slide_code(img_path, page_num, len(img_files))
             save_slide_code(proj_dir, page_num, code)
         
-        # 1. Main Slide
-        main_slide = prs.slides.add_slide(prs.slide_layouts[6])
-        success, err = execute_with_fallback(code, main_slide, execution_globals.copy())
+        # 1. Main Slide (for the final merged file)
+        # We use a Proxy wrapper for this specific slide to add the background
+        from src.ppt_generator import SlidesListProxy, _exec_script
+        proxy_slides = SlidesListProxy(main_prs.slides, bg_image_path=img_path)
+        main_slide = proxy_slides.add_slide(main_prs.slide_layouts[6])
+        
+        # USE THE PRODUCTION HARDENED ENGINE DIRECTLY
+        # This now handles redirection, patching, and proxies internally
+        success, err = _exec_script(code, bg_image_path=img_path, redirect_slide=main_slide)
         
         if success:
             print(f"  [OK] Page {page_num} Success")
@@ -160,20 +175,23 @@ def test_project_ppt_generation(project_name: str):
             print(f"  [FAIL] Page {page_num} Failed")
             results.append((page_num, False, err))
 
-        # 2. Individual Debug Slide
+        # 2. Individual Debug Slide (High Fidelity)
         page_pptx = output_pptx.replace(".pptx", f"_page_{page_num:02d}.pptx")
         temp_prs = Presentation()
-        temp_prs.slide_width = prs.slide_width
-        temp_prs.slide_height = prs.slide_height
-        dst_slide = temp_prs.slides.add_slide(temp_prs.slide_layouts[6])
-        success_indiv, _ = execute_with_fallback(code, dst_slide, execution_globals.copy())
-        if success_indiv:
-            temp_prs.save(page_pptx)
-            print(f"    - Saved individual slide to {os.path.basename(page_pptx)}")
+        temp_prs.slide_width = main_prs.slide_width
+        temp_prs.slide_height = main_prs.slide_height
+        
+        temp_proxy_slides = SlidesListProxy(temp_prs.slides, bg_image_path=img_path)
+        dst_slide = temp_proxy_slides.add_slide(temp_prs.slide_layouts[6])
+        
+        # Use production engine for individual slide too
+        _exec_script(code, bg_image_path=img_path, redirect_slide=dst_slide)
+        temp_prs.save(page_pptx)
+        print(f"    - Saved individual slide to {os.path.basename(page_pptx)}")
 
-    # 3. Final merge
+    # 3. Final save
     try:
-        prs.save(output_pptx)
+        main_prs.save(output_pptx)
         print(f"\nFinal PPT saved to: {output_pptx}")
     except Exception as e:
         print(f"Failed to save final PPT: {e}")

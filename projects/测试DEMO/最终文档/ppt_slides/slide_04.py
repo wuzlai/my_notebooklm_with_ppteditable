@@ -5,269 +5,258 @@ def build_slide(slide):
     from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
 
     # Colors
-    BG_COLOR = RGBColor(0x0A, 0x14, 0x28)
-    GOLD = RGBColor(0xFF, 0xDF, 0x8C)
+    DARK_BLUE = RGBColor(0x0F, 0x2B, 0x5B)
+    GRAY_TEXT = RGBColor(0x59, 0x59, 0x59)
+    GREEN = RGBColor(0x2E, 0x9E, 0x66)
+    GRAY_BLUE = RGBColor(0x7C, 0x8A, 0x9C)
+    RED = RGBColor(0xD9, 0x53, 0x4F)
+    BLACK = RGBColor(0x00, 0x00, 0x00)
     WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-    LIGHT_GRAY = RGBColor(0xD0, 0xD0, 0xD0)
-    DARK_BLUE_BG = RGBColor(0x15, 0x28, 0x42)
-    BORDER_BLUE = RGBColor(0x3A, 0x55, 0x75)
-    FONT_NAME = "Microsoft YaHei"
+    BG_COLOR = RGBColor(0xF8, 0xF9, 0xFA)
 
-    # Set Background
-    background = slide.background
-    fill = background.fill
-    fill.solid()
-    fill.fore_color.rgb = BG_COLOR
+    # Background Canvas
+    bg = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.3), Inches(0.3), Inches(12.733), Inches(6.9))
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = WHITE
+    bg.line.color.rgb = RGBColor(0xE0, 0xE0, 0xE0)
 
-    # Header Title
-    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.4), Inches(10), Inches(0.8))
+    # Title
+    title_box = slide.shapes.add_textbox(Inches(0.6), Inches(0.5), Inches(8), Inches(0.6))
     tf = title_box.text_frame
     p = tf.paragraphs[0]
-    p.text = "结论：复杂度决定 AI 的应用边界"
-    p.font.size = Pt(32)
+    p.text = "结论：复杂度决定 AI 价值"
+    p.font.name = "Microsoft YaHei"
+    p.font.size = Pt(28)
     p.font.bold = True
-    p.font.color.rgb = GOLD
-    p.font.name = FONT_NAME
+    p.font.color.rgb = DARK_BLUE
 
-    # Header Subtitle
-    sub_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(10), Inches(0.5))
+    # Subtitle
+    sub_box = slide.shapes.add_textbox(Inches(0.6), Inches(1.1), Inches(8), Inches(0.4))
     tf = sub_box.text_frame
     p = tf.paragraphs[0]
-    p.text = "SAP ABAP AI Coding 效能总览"
-    p.font.size = Pt(20)
-    p.font.color.rgb = WHITE
-    p.font.name = FONT_NAME
-
-    # --- Left Section (Quadrant Chart) ---
-    # Shadow/Offset Border
-    left_shadow = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.6), Inches(1.7), Inches(6.5), Inches(5.5))
-    left_shadow.fill.background()
-    left_shadow.line.color.rgb = GOLD
-    left_shadow.line.width = Pt(1.5)
-
-    # Main Left Background
-    left_bg = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.5), Inches(1.6), Inches(6.5), Inches(5.5))
-    left_bg.fill.solid()
-    left_bg.fill.fore_color.rgb = DARK_BLUE_BG
-    left_bg.line.color.rgb = BORDER_BLUE
-    left_bg.line.width = Pt(1)
+    p.text = "SAP ABAP AI Coding 效率与质量总览"
+    p.font.name = "Microsoft YaHei"
+    p.font.size = Pt(16)
+    p.font.color.rgb = GRAY_TEXT
 
     # Axes
-    y_axis = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(1.0), Inches(6.8), Inches(1.0), Inches(1.8))
-    y_axis.line.color.rgb = GOLD
-    y_axis.line.width = Pt(2)
-    y_axis.line.end_arrowhead = 2
+    center_x, center_y = 6.66, 3.3
 
-    x_axis = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(1.0), Inches(6.8), Inches(6.8), Inches(6.8))
-    x_axis.line.color.rgb = GOLD
-    x_axis.line.width = Pt(2)
-    x_axis.line.end_arrowhead = 2
+    # Horizontal Axis
+    h_line = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(1.5), Inches(center_y), Inches(11.8), Inches(center_y))
+    h_line.line.color.rgb = DARK_BLUE
+    h_line.line.width = Pt(1.5)
+    
+    l_arrow = slide.shapes.add_shape(MSO_SHAPE.ISOSCELES_TRIANGLE, Inches(1.45), Inches(center_y - 0.05), Inches(0.1), Inches(0.1))
+    l_arrow.rotation = -90
+    l_arrow.fill.solid()
+    l_arrow.fill.fore_color.rgb = DARK_BLUE
+    l_arrow.line.fill.background()
+    
+    r_arrow = slide.shapes.add_shape(MSO_SHAPE.ISOSCELES_TRIANGLE, Inches(11.75), Inches(center_y - 0.05), Inches(0.1), Inches(0.1))
+    r_arrow.rotation = 90
+    r_arrow.fill.solid()
+    r_arrow.fill.fore_color.rgb = DARK_BLUE
+    r_arrow.line.fill.background()
+
+    # Vertical Axis
+    v_line = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(center_x), Inches(1.8), Inches(center_x), Inches(4.8))
+    v_line.line.color.rgb = DARK_BLUE
+    v_line.line.width = Pt(1.5)
+    
+    t_arrow = slide.shapes.add_shape(MSO_SHAPE.ISOSCELES_TRIANGLE, Inches(center_x - 0.05), Inches(1.75), Inches(0.1), Inches(0.1))
+    t_arrow.fill.solid()
+    t_arrow.fill.fore_color.rgb = DARK_BLUE
+    t_arrow.line.fill.background()
+    
+    b_arrow = slide.shapes.add_shape(MSO_SHAPE.ISOSCELES_TRIANGLE, Inches(center_x - 0.05), Inches(4.75), Inches(0.1), Inches(0.1))
+    b_arrow.rotation = 180
+    b_arrow.fill.solid()
+    b_arrow.fill.fore_color.rgb = DARK_BLUE
+    b_arrow.line.fill.background()
+
+    # Center Circle
+    c_circle = slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(center_x - 0.1), Inches(center_y - 0.1), Inches(0.2), Inches(0.2))
+    c_circle.fill.solid()
+    c_circle.fill.fore_color.rgb = BG_COLOR
+    c_circle.line.color.rgb = DARK_BLUE
+    c_circle.line.width = Pt(1.5)
 
     # Axis Labels
-    y_label = slide.shapes.add_textbox(Inches(0.2), Inches(4.0), Inches(1.5), Inches(0.5))
-    y_label.rotation = -90
-    y_p = y_label.text_frame.paragraphs[0]
-    y_p.text = "提效百分比"
-    y_p.font.size = Pt(14)
-    y_p.font.color.rgb = GOLD
-    y_p.font.name = FONT_NAME
+    def add_axis_label(left, top, width, text, align):
+        box = slide.shapes.add_textbox(left, top, width, Inches(0.6))
+        tf = box.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.text = text
+        p.font.name = "Microsoft YaHei"
+        p.font.size = Pt(12)
+        p.alignment = align
 
-    x_label = slide.shapes.add_textbox(Inches(3.5), Inches(6.9), Inches(2.0), Inches(0.5))
-    x_p = x_label.text_frame.paragraphs[0]
-    x_p.text = "任务复杂度"
-    x_p.font.size = Pt(14)
-    x_p.font.color.rgb = GOLD
-    x_p.font.name = FONT_NAME
+    add_axis_label(Inches(0.5), Inches(3.0), Inches(0.9), "任务度\nSimple 简单", PP_ALIGN.RIGHT)
+    add_axis_label(Inches(11.9), Inches(3.0), Inches(1.2), "复杂度\nComplex 复杂", PP_ALIGN.LEFT)
+    add_axis_label(Inches(5.66), Inches(1.3), Inches(2.0), "效率影响\nPositive 正面", PP_ALIGN.CENTER)
+    add_axis_label(Inches(5.66), Inches(4.9), Inches(2.0), "Negative 负面\n效率影响", PP_ALIGN.CENTER)
 
-    # Quadrants Helper Function
-    def add_quadrant(left, top, width, height, title, icon_text, main_text, sub_text, is_highlight=False):
-        box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
-        box.fill.solid()
-        box.fill.fore_color.rgb = RGBColor(0x1C, 0x33, 0x50) if not is_highlight else RGBColor(0x25, 0x3A, 0x45)
-        if is_highlight:
-            box.line.color.rgb = GOLD
-            box.line.width = Pt(1.5)
-        else:
-            box.line.color.rgb = BORDER_BLUE
-            box.line.width = Pt(1)
-
-        # Title
-        tb = slide.shapes.add_textbox(left + Inches(0.1), top + Inches(0.1), width - Inches(0.2), Inches(0.4))
-        p = tb.text_frame.paragraphs[0]
-        p.text = title
-        p.font.size = Pt(14)
+    # Quadrant Data
+    def add_quadrant_data(left, top, icon_char, icon_color, title, title_color, subtitle, desc):
+        circle = slide.shapes.add_shape(MSO_SHAPE.OVAL, left, top + Inches(0.05), Inches(0.35), Inches(0.35))
+        circle.fill.solid()
+        circle.fill.fore_color.rgb = icon_color
+        circle.line.fill.background()
+        tf = circle.text_frame
+        tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+        p = tf.paragraphs[0]
+        p.text = icon_char
+        p.font.name = "Microsoft YaHei"
+        p.font.size = Pt(16)
+        p.font.bold = True
         p.font.color.rgb = WHITE
-        p.font.name = FONT_NAME
+        p.alignment = PP_ALIGN.CENTER
 
-        # Icon
-        icon_box = slide.shapes.add_textbox(left + width - Inches(0.6), top + Inches(0.1), Inches(0.5), Inches(0.5))
-        p_icon = icon_box.text_frame.paragraphs[0]
-        p_icon.text = icon_text
-        p_icon.font.size = Pt(18)
-        p_icon.font.color.rgb = GOLD if is_highlight else LIGHT_GRAY
-        p_icon.font.name = "Segoe UI Symbol"
+        box = slide.shapes.add_textbox(left + Inches(0.4), top, Inches(2.5), Inches(1.0))
+        tf = box.text_frame
+        tf.word_wrap = True
 
-        # Main Text
-        if main_text:
-            main_box = slide.shapes.add_textbox(left, top + Inches(0.6), width, Inches(0.6))
-            main_p = main_box.text_frame.paragraphs[0]
-            main_p.text = main_text
-            main_p.font.size = Pt(26)
-            main_p.font.bold = True
-            main_p.font.color.rgb = GOLD
-            main_p.alignment = PP_ALIGN.CENTER
-            main_p.font.name = FONT_NAME
+        p1 = tf.paragraphs[0]
+        p1.text = title
+        p1.font.name = "Microsoft YaHei"
+        p1.font.size = Pt(20)
+        p1.font.bold = True
+        p1.font.color.rgb = title_color
 
-        # Sub Text
-        sub_box = slide.shapes.add_textbox(left, top + Inches(1.3), width, Inches(0.4))
-        sub_p = sub_box.text_frame.paragraphs[0]
-        sub_p.text = sub_text
-        sub_p.font.size = Pt(13)
-        sub_p.font.color.rgb = LIGHT_GRAY
-        sub_p.alignment = PP_ALIGN.CENTER
-        sub_p.font.name = FONT_NAME
+        p2 = tf.add_paragraph()
+        p2.text = subtitle
+        p2.font.name = "Microsoft YaHei"
+        p2.font.size = Pt(14)
+        p2.font.bold = True
+        p2.font.color.rgb = BLACK
+        p2.space_before = Pt(5)
 
-        # Special handling for Bottom-Right broken link icon
-        if title == "应用禁区":
-            link_icon = slide.shapes.add_textbox(left + Inches(0.8), top + Inches(0.4), Inches(1.1), Inches(1.0))
-            link_p = link_icon.text_frame.paragraphs[0]
-            link_p.text = "🔗"
-            link_p.font.size = Pt(45)
-            link_p.font.color.rgb = LIGHT_GRAY
-            link_p.alignment = PP_ALIGN.CENTER
-            link_p.font.name = "Segoe UI Emoji"
+        p3 = tf.add_paragraph()
+        p3.text = desc
+        p3.font.name = "Microsoft YaHei"
+        p3.font.size = Pt(12)
+        p3.font.color.rgb = GRAY_TEXT
 
-            strike = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, left + Inches(1.0), top + Inches(0.5), left + Inches(1.7), top + Inches(1.2))
-            strike.line.color.rgb = GOLD
-            strike.line.width = Pt(3)
+    add_quadrant_data(Inches(2.9), Inches(2.0), "↑", GREEN, "+50% 提效", GREEN, "🕒 简单场景", "快速生成工具代码")
+    add_quadrant_data(Inches(6.8), Inches(2.3), "→", GRAY_BLUE, "~0% 持平", GRAY_BLUE, "⚖️ 中等场景", "需人工修正逻辑")
+    add_quadrant_data(Inches(8.5), Inches(3.6), "↓", RED, "-60% 效率反降", RED, "⚙️ 复杂场景", "频繁幻觉与重构")
 
-    # Add 4 Quadrants
-    add_quadrant(Inches(1.2), Inches(2.0), Inches(2.6), Inches(2.2), "简单场景", "☑", "50% 提效", "辅助逻辑，高收益")
-    add_quadrant(Inches(1.2), Inches(4.4), Inches(2.6), Inches(2.2), "中等场景", "⊖", "无提升", "效率持平")
-    add_quadrant(Inches(4.0), Inches(2.0), Inches(2.6), Inches(2.2), "复杂场景", "⚠", "工作量激增", "效率倒挂，风险高", is_highlight=True)
-    add_quadrant(Inches(4.0), Inches(4.4), Inches(2.6), Inches(2.2), "应用禁区", "⊘", "", "不可靠，需人工完全接管")
+    # Bottom Section - Title
+    bot_title = slide.shapes.add_textbox(Inches(0.6), Inches(4.8), Inches(3), Inches(0.4))
+    p = bot_title.text_frame.paragraphs[0]
+    p.text = "核心洞察与评价"
+    p.font.name = "Microsoft YaHei"
+    p.font.size = Pt(16)
+    p.font.bold = True
+    p.font.color.rgb = BLACK
 
-    # Trend Curves
-    curve_tl = slide.shapes.add_connector(MSO_CONNECTOR.CURVE, Inches(1.5), Inches(4.0), Inches(3.6), Inches(3.0))
-    curve_tl.line.color.rgb = GOLD
-    curve_tl.line.width = Pt(2)
-    curve_tl.line.end_arrowhead = 2
+    # Bottom Left Block - Chart Icon
+    chart_box = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.9), Inches(5.4), Inches(0.8), Inches(0.6))
+    chart_box.fill.background()
+    chart_box.line.color.rgb = BLACK
+    chart_box.line.width = Pt(1.5)
 
-    curve_tr = slide.shapes.add_connector(MSO_CONNECTOR.CURVE, Inches(4.2), Inches(2.5), Inches(6.4), Inches(4.0))
-    curve_tr.line.color.rgb = GOLD
-    curve_tr.line.width = Pt(2)
-    curve_tr.line.end_arrowhead = 2
+    points = [(1.0, 5.5), (1.2, 5.6), (1.4, 5.8), (1.6, 5.9)]
+    for i in range(len(points)-1):
+        line = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(points[i][0]), Inches(points[i][1]), Inches(points[i+1][0]), Inches(points[i+1][1]))
+        line.line.color.rgb = BLACK
+        line.line.width = Pt(1.5)
+    for pt in points:
+        dot = slide.shapes.add_shape(MSO_SHAPE.OVAL, Inches(pt[0]-0.05), Inches(pt[1]-0.05), Inches(0.1), Inches(0.1))
+        dot.fill.solid()
+        dot.fill.fore_color.rgb = WHITE
+        dot.line.color.rgb = BLACK
+        dot.line.width = Pt(1.5)
 
-    # --- Right Section ---
+    # Bottom Left Block - Text
+    left_text = slide.shapes.add_textbox(Inches(1.9), Inches(5.2), Inches(4.8), Inches(1.2))
+    tf = left_text.text_frame
+    tf.word_wrap = True
+    p1 = tf.paragraphs[0]
+    p1.text = "效率曲线与工具表现"
+    p1.font.name = "Microsoft YaHei"
+    p1.font.size = Pt(13)
+    p1.font.bold = True
 
-    # 1. Bottlenecks Box
-    bot_bg = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.5), Inches(1.6), Inches(5.3), Inches(1.8))
-    bot_bg.fill.solid()
-    bot_bg.fill.fore_color.rgb = DARK_BLUE_BG
-    bot_bg.line.color.rgb = BORDER_BLUE
-    bot_bg.line.width = Pt(1)
+    p2 = tf.add_paragraph()
+    p2.text = "• 效率趋势：简单场景提效50%，中等场景持平，复杂场景效率反降60%。"
+    p2.font.name = "Microsoft YaHei"
+    p2.font.size = Pt(11)
+    p2.space_before = Pt(3)
 
-    bot_title = slide.shapes.add_textbox(Inches(7.5), Inches(1.7), Inches(5.3), Inches(0.4))
-    bot_p = bot_title.text_frame.paragraphs[0]
-    bot_p.text = "四大瓶颈"
-    bot_p.font.size = Pt(16)
-    bot_p.font.bold = True
-    bot_p.font.color.rgb = GOLD
-    bot_p.alignment = PP_ALIGN.CENTER
-    bot_p.font.name = FONT_NAME
+    p3 = tf.add_paragraph()
+    p3.text = "• 工具评价：Claude Code 在文档解析与逻辑框架上优于 Copilot，但均不精通 SAP 领域。 ✅ ， ❌ Copilot"
+    p3.font.name = "Microsoft YaHei"
+    p3.font.size = Pt(11)
+    p3.space_before = Pt(3)
 
-    def add_list_item(left, top, icon, text):
-        tb = slide.shapes.add_textbox(left, top, Inches(2.5), Inches(0.4))
-        p = tb.text_frame.paragraphs[0]
-        p.text = f"{icon}  {text}"
-        p.font.size = Pt(14)
-        p.font.color.rgb = WHITE
-        p.font.name = FONT_NAME
+    # Bottom Right Block - Warning Icon
+    warn_tri = slide.shapes.add_shape(MSO_SHAPE.ISOSCELES_TRIANGLE, Inches(7.0), Inches(5.3), Inches(0.5), Inches(0.45))
+    warn_tri.fill.background()
+    warn_tri.line.color.rgb = BLACK
+    warn_tri.line.width = Pt(1.5)
+    warn_ex = slide.shapes.add_textbox(Inches(7.0), Inches(5.35), Inches(0.5), Inches(0.4))
+    p = warn_ex.text_frame.paragraphs[0]
+    p.text = "!"
+    p.font.name = "Microsoft YaHei"
+    p.font.size = Pt(16)
+    p.font.bold = True
+    p.alignment = PP_ALIGN.CENTER
 
-    add_list_item(Inches(7.8), Inches(2.2), "☁", "数据字典幻觉")
-    add_list_item(Inches(10.3), Inches(2.2), "🔗", "接口规则缺失")
-    add_list_item(Inches(7.8), Inches(2.7), "📈", "修复成本反超")
-    add_list_item(Inches(10.3), Inches(2.7), "💬", "提示词被忽略")
+    # Bottom Right Block - Broken Link Icon
+    link_oval1 = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.05), Inches(5.9), Inches(0.25), Inches(0.15))
+    link_oval1.rotation = 45
+    link_oval1.fill.background()
+    link_oval1.line.color.rgb = BLACK
+    link_oval1.line.width = Pt(1.5)
 
-    # 2. Tools Box
-    tool_bg = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.5), Inches(3.6), Inches(5.3), Inches(1.8))
-    tool_bg.fill.solid()
-    tool_bg.fill.fore_color.rgb = DARK_BLUE_BG
-    tool_bg.line.color.rgb = BORDER_BLUE
-    tool_bg.line.width = Pt(1)
+    link_oval2 = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.2), Inches(6.05), Inches(0.25), Inches(0.15))
+    link_oval2.rotation = 45
+    link_oval2.fill.background()
+    link_oval2.line.color.rgb = BLACK
+    link_oval2.line.width = Pt(1.5)
 
-    tool_title = slide.shapes.add_textbox(Inches(7.5), Inches(3.7), Inches(5.3), Inches(0.4))
-    tool_p = tool_title.text_frame.paragraphs[0]
-    tool_p.text = "工具选型"
-    tool_p.font.size = Pt(16)
-    tool_p.font.bold = True
-    tool_p.font.color.rgb = GOLD
-    tool_p.alignment = PP_ALIGN.CENTER
-    tool_p.font.name = FONT_NAME
+    break_line = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(7.1), Inches(6.1), Inches(7.35), Inches(5.9))
+    break_line.line.color.rgb = BLACK
+    break_line.line.width = Pt(1.5)
 
-    # Claude Code
-    cc_title = slide.shapes.add_textbox(Inches(7.8), Inches(4.1), Inches(2.5), Inches(0.4))
-    cc_p = cc_title.text_frame.paragraphs[0]
-    cc_p.text = "⚡ Claude Code"
-    cc_p.font.size = Pt(15)
-    cc_p.font.bold = True
-    cc_p.font.color.rgb = WHITE
-    cc_p.font.name = FONT_NAME
+    # Bottom Right Block - Text
+    right_text = slide.shapes.add_textbox(Inches(7.7), Inches(5.2), Inches(4.8), Inches(1.2))
+    tf = right_text.text_frame
+    tf.word_wrap = True
+    p1 = tf.paragraphs[0]
+    p1.text = "核心痛点与建议"
+    p1.font.name = "Microsoft YaHei"
+    p1.font.size = Pt(13)
+    p1.font.bold = True
 
-    add_list_item(Inches(7.8), Inches(4.5), "☑", "业务理解优秀")
-    add_list_item(Inches(7.8), Inches(4.9), "☑", "多文件解析强")
+    p2 = tf.add_paragraph()
+    p2.text = "• 核心痛点：虚构数据字典与忽略提示词是限制 AI 在 SAP 领域应用的两大死穴。"
+    p2.font.name = "Microsoft YaHei"
+    p2.font.size = Pt(11)
+    p2.space_before = Pt(3)
 
-    # Copilot
-    cp_title = slide.shapes.add_textbox(Inches(10.3), Inches(4.1), Inches(2.5), Inches(0.4))
-    cp_p = cp_title.text_frame.paragraphs[0]
-    cp_p.text = "🤖 Copilot"
-    cp_p.font.size = Pt(15)
-    cp_p.font.bold = True
-    cp_p.font.color.rgb = WHITE
-    cp_p.font.name = FONT_NAME
+    p3 = tf.add_paragraph()
+    p3.text = "• 专家建议：现阶段 AI 仅适用于辅助编写简单工具脚本，无法应对中高复杂度业务。 ❌ 中高复杂度业务。"
+    p3.font.name = "Microsoft YaHei"
+    p3.font.size = Pt(11)
+    p3.space_before = Pt(3)
 
-    add_list_item(Inches(10.3), Inches(4.5), "☒", "业务理解受限")
-    add_list_item(Inches(10.3), Inches(4.9), "☒", "多文件解析弱")
+    # Conclusion Box
+    conc_box = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.75), Inches(6.6), Inches(11.833), Inches(0.5))
+    conc_box.fill.solid()
+    conc_box.fill.fore_color.rgb = BG_COLOR
+    conc_box.line.color.rgb = BLACK
+    conc_box.line.width = Pt(1.5)
 
-    # 3. Conclusion Box
-    conc_shadow = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.6), Inches(5.7), Inches(5.3), Inches(1.4))
-    conc_shadow.fill.background()
-    conc_shadow.line.color.rgb = GOLD
-    conc_shadow.line.width = Pt(1.5)
-
-    conc_bg = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.5), Inches(5.6), Inches(5.3), Inches(1.4))
-    conc_bg.fill.solid()
-    conc_bg.fill.fore_color.rgb = RGBColor(0x1C, 0x2A, 0x35)
-    conc_bg.line.color.rgb = BORDER_BLUE
-    conc_bg.line.width = Pt(1)
-
-    rb_text = slide.shapes.add_textbox(Inches(7.7), Inches(5.8), Inches(4.9), Inches(1.1))
-    rb_tf = rb_text.text_frame
-    rb_tf.word_wrap = True
-    rb_p = rb_tf.paragraphs[0]
-
-    run1 = rb_p.add_run()
-    run1.text = "核心建议："
-    run1.font.size = Pt(15)
-    run1.font.bold = True
-    run1.font.color.rgb = GOLD
-    run1.font.name = FONT_NAME
-
-    run2 = rb_p.add_run()
-    run2.text = "当前 AI 尚未具备处理 ABAP 中高难度任务的能力，仅推荐用于"
-    run2.font.size = Pt(15)
-    run2.font.color.rgb = WHITE
-    run2.font.name = FONT_NAME
-
-    run3 = rb_p.add_run()
-    run3.text = "辅助简单逻辑"
-    run3.font.size = Pt(15)
-    run3.font.bold = True
-    run3.font.color.rgb = GOLD
-    run3.font.name = FONT_NAME
-
-    run4 = rb_p.add_run()
-    run4.text = "。"
-    run4.font.size = Pt(15)
-    run4.font.color.rgb = WHITE
-    run4.font.name = FONT_NAME
+    tf = conc_box.text_frame
+    tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+    p = tf.paragraphs[0]
+    p.text = "现阶段 AI 仅适用于辅助编写简单工具脚本，无法应对中高复杂度业务。"
+    p.font.name = "Microsoft YaHei"
+    p.font.size = Pt(16)
+    p.font.bold = True
+    p.font.color.rgb = BLACK
+    p.alignment = PP_ALIGN.CENTER

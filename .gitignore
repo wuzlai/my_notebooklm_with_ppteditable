@@ -9,3 +9,25 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
+
+# Large Binaries (Root)
+*.mp4
+*.zip
+*.tar.gz
+
+# --- Project Selective Management ---
+# 1. Ignore ALL outputs to keep repo lean
+projects/**/生成的图片/
+projects/**/最终文档/*.pptx
+projects/**/最终文档/*.pdf
+projects/**/最终文档/ppt_slides/*.pptx
+
+# 2. Force Track Inputs & AI Logic (The 'Blueprints')
+!projects/
+!projects/*/
+!projects/**/原文档/
+!projects/**/原文档/**
+!projects/**/优化PP页文档/
+!projects/**/优化PP页文档/**
+!projects/**/最终文档/*.py
+!projects/**/最终文档/ppt_slides/*.py

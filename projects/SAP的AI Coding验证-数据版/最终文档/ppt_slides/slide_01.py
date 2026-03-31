@@ -1,115 +1,222 @@
 def build_slide(slide):
-    # 1. 添加顶部标题横幅
-    add_header_banner(
-        slide, 
-        "简单场景：AI 提效显著但仍需人工干预", 
-        bg_color=RGBColor(0x15, 0x55, 0xC0)
-    )
+    # Define Colors
+    TITLE_COLOR = RGBColor(0x1A, 0x3B, 0x5C)  # Dark Blue/Teal
+    GREEN_COLOR = RGBColor(0x00, 0xC8, 0x75)  # Bright Green
+    ORANGE_COLOR = RGBColor(0xF2, 0x8C, 0x28) # Bright Orange
+    LINE_COLOR = RGBColor(0xD0, 0xD0, 0xD0)   # Light Gray
+    MUTED_TEXT = RGBColor(0x59, 0x59, 0x59)   # Gray for page number
+    BLACK_TEXT = RGBColor(0x00, 0x00, 0x00)
 
-    # 2. 添加副标题
-    add_subtitle(
-        slide, 
-        "案例A — 销售订单报表查询（低复杂度验证）", 
-        left=Inches(0.5), 
-        top=Inches(1.2), 
-        font_size=Pt(18)
-    )
+    # --- Title Section ---
+    # Main Title
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(0.5), Inches(10), Inches(0.6))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "简单报表：AI 提效的“甜点区”"
+    p.font.size = Pt(32)
+    p.font.bold = True
+    p.font.color.rgb = TITLE_COLOR
+    p.font.name = "Microsoft YaHei"
 
-    # 3. 添加左侧要点列表 (带图标、标签和描述)
-    left_col_x = Inches(0.5)
-    
-    add_bullet_item(
-        slide, 
-        left=left_col_x, 
-        top=Inches(2.0), 
-        symbol="⚡", 
-        label="效率对比：", 
-        description="Claude Code 耗时仅 30 分钟，较手写开发提效 50%，而 Copilot 无明显提升。",
-        width=Inches(5.5)
-    )
-    
-    add_bullet_item(
-        slide, 
-        left=left_col_x, 
-        top=Inches(3.2), 
-        symbol="🐛", 
-        label="生成质量：", 
-        description="两款 AI 初次生成均无法直接运行，均存在地址取数逻辑或字段虚构问题。",
-        width=Inches(5.5)
-    )
-    
-    add_bullet_item(
-        slide, 
-        left=left_col_x, 
-        top=Inches(4.4), 
-        symbol="🛡️", 
-        label="运行风险：", 
-        description="Copilot 生成代码导致系统崩溃 (Short Dump)，Claude Code 运行相对平稳。",
-        width=Inches(5.5)
-    )
-    
-    add_bullet_item(
-        slide, 
-        left=left_col_x, 
-        top=Inches(5.6), 
-        symbol="⚙️", 
-        label="性能瓶颈：", 
-        description="AI 在 SQL 优化方面表现欠缺，存在大表关联不当及未去重等性能隐患。",
-        width=Inches(5.5)
-    )
+    # Subtitle
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.15), Inches(10), Inches(0.5))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "案例A - 销售订单报表查询（低复杂度）验证"
+    p.font.size = Pt(20)
+    p.font.bold = True
+    p.font.color.rgb = TITLE_COLOR
+    p.font.name = "Microsoft YaHei"
 
-    # 4. 添加中间的垂直分割线
-    separator = slide.shapes.add_shape(
-        MSO_SHAPE.RECTANGLE,
-        left=Inches(6.4), 
-        top=Inches(2.0), 
-        width=Pt(1), 
-        height=Inches(4.5)
-    )
-    separator.fill.solid()
-    separator.fill.fore_color.rgb = RGBColor(0xDD, 0xDD, 0xDD)
-    separator.line.fill.background()
+    # Horizontal Separator Line
+    connector = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(0.8), Inches(1.8), Inches(12.5), Inches(1.8))
+    connector.line.color.rgb = LINE_COLOR
+    connector.line.width = Pt(1)
 
-    # 5. 添加右侧柱状图
-    chart_left = Inches(6.8)
-    gray_color = RGBColor(0xA6, 0xA6, 0xA6)
-    cyan_color = RGBColor(0x00, 0xBC, 0xD4)
-    
-    add_bar_chart(
-        slide,
-        left=chart_left,
-        top=Inches(1.8),
-        width=Inches(6.0),
-        height=Inches(3.5),
-        categories=["Copilot", "Claude Code", "手写开发"],
-        values=[60, 30, 60],
-        title="开发耗时对比（分钟）",
-        bar_colors=[gray_color, cyan_color, gray_color]
-    )
+    # --- Middle Section ---
+    # Left Column (Claude Code)
+    # Icon
+    txBox = slide.shapes.add_textbox(Inches(1.0), Inches(2.3), Inches(0.8), Inches(0.8))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "⏱"
+    p.font.size = Pt(48)
+    p.font.color.rgb = GREEN_COLOR
 
-    # 6. 添加图表上的标注标签
-    add_callout_label(
-        slide, 
-        left=Inches(10.0), 
-        top=Inches(3.0), 
-        text="提效 50%", 
-        bg_color=cyan_color
-    )
-    
-    add_callout_label(
-        slide, 
-        left=Inches(11.6), 
-        top=Inches(4.2), 
-        text="无明显提升", 
-        bg_color=gray_color
-    )
+    # Title
+    txBox = slide.shapes.add_textbox(Inches(2.0), Inches(2.3), Inches(4.5), Inches(0.4))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "Claude Code"
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = BLACK_TEXT
+    p.font.name = "Microsoft YaHei"
+    run = p.add_run()
+    run.text = " （AI 提效点）"
+    run.font.size = Pt(16)
+    run.font.bold = True
+    run.font.color.rgb = BLACK_TEXT
+    run.font.name = "Microsoft YaHei"
 
-    # 7. 添加右下角核心结论框
-    conclusion_text = "核心结论：在简单场景下，Claude Code 展现出显著的速度优势，但两款工具生成的代码均需人工深度介入进行逻辑修正和性能优化才能交付使用。"
-    add_conclusion_box(
-        slide,
-        left=chart_left,
-        top=Inches(5.6),
-        width=Inches(6.0),
-        text=conclusion_text
-    )
+    # Highlight Text
+    txBox = slide.shapes.add_textbox(Inches(2.0), Inches(2.7), Inches(4.0), Inches(0.8))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "提效 "
+    p.font.size = Pt(28)
+    p.font.bold = True
+    p.font.color.rgb = GREEN_COLOR
+    p.font.name = "Microsoft YaHei"
+    run = p.add_run()
+    run.text = "50%"
+    run.font.size = Pt(40)
+    run.font.bold = True
+    run.font.color.rgb = GREEN_COLOR
+    run.font.name = "Microsoft YaHei"
+
+    # Bullet Icon
+    txBox = slide.shapes.add_textbox(Inches(1.0), Inches(3.8), Inches(0.4), Inches(0.4))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "✅"
+    p.font.size = Pt(16)
+
+    # Bullet Text
+    txBox = slide.shapes.add_textbox(Inches(1.4), Inches(3.8), Inches(4.5), Inches(0.4))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "仅需 2 轮人工干预即可运行"
+    p.font.size = Pt(16)
+    p.font.color.rgb = BLACK_TEXT
+    p.font.name = "Microsoft YaHei"
+
+    # Right Column (GitHub Copilot)
+    # Icon
+    txBox = slide.shapes.add_textbox(Inches(7.2), Inches(2.3), Inches(0.8), Inches(0.8))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "⏱"
+    p.font.size = Pt(48)
+    p.font.color.rgb = ORANGE_COLOR
+
+    # Title
+    txBox = slide.shapes.add_textbox(Inches(8.2), Inches(2.3), Inches(4.5), Inches(0.4))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "GitHub Copilot"
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = BLACK_TEXT
+    p.font.name = "Microsoft YaHei"
+    run = p.add_run()
+    run.text = " （风险点）"
+    run.font.size = Pt(16)
+    run.font.bold = True
+    run.font.color.rgb = BLACK_TEXT
+    run.font.name = "Microsoft YaHei"
+
+    # Highlight Text
+    txBox = slide.shapes.add_textbox(Inches(8.2), Inches(2.7), Inches(4.0), Inches(0.8))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "提效 "
+    p.font.size = Pt(28)
+    p.font.bold = True
+    p.font.color.rgb = ORANGE_COLOR
+    p.font.name = "Microsoft YaHei"
+    run = p.add_run()
+    run.text = "0%"
+    run.font.size = Pt(40)
+    run.font.bold = True
+    run.font.color.rgb = ORANGE_COLOR
+    run.font.name = "Microsoft YaHei"
+
+    # Bullet Icon
+    txBox = slide.shapes.add_textbox(Inches(7.2), Inches(3.8), Inches(0.4), Inches(0.4))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "⚠️"
+    p.font.size = Pt(16)
+
+    # Bullet Text
+    txBox = slide.shapes.add_textbox(Inches(7.6), Inches(3.8), Inches(5.0), Inches(0.8))
+    tf = txBox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.text = "因 OpenSQL 字段不兼容导致 1 次运行崩溃（Short Dump）"
+    p.font.size = Pt(16)
+    p.font.color.rgb = BLACK_TEXT
+    p.font.name = "Microsoft YaHei"
+
+    # Vertical Separator Line
+    connector = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(6.66), Inches(2.2), Inches(6.66), Inches(4.5))
+    connector.line.color.rgb = LINE_COLOR
+    connector.line.width = Pt(1)
+
+    # --- Bottom Section ---
+    # Section Title
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(5.0), Inches(10), Inches(0.5))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "共性问题与性能隐患"
+    p.font.size = Pt(22)
+    p.font.bold = True
+    p.font.color.rgb = TITLE_COLOR
+    p.font.name = "Microsoft YaHei"
+
+    # Bullet 1 Icon
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(5.7), Inches(0.4), Inches(0.4))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "⚠️"
+    p.font.size = Pt(18)
+
+    # Bullet 1 Text
+    txBox = slide.shapes.add_textbox(Inches(1.3), Inches(5.7), Inches(11.5), Inches(0.5))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "共性问题："
+    p.font.bold = True
+    p.font.size = Pt(16)
+    p.font.color.rgb = BLACK_TEXT
+    p.font.name = "Microsoft YaHei"
+    run = p.add_run()
+    run.text = "初始生成均不可直接编译，AI 难以准确处理地址实例化及过账状态逻辑。"
+    run.font.bold = False
+    run.font.size = Pt(16)
+    run.font.color.rgb = BLACK_TEXT
+    run.font.name = "Microsoft YaHei"
+
+    # Bullet 2 Icon
+    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(6.4), Inches(0.4), Inches(0.4))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "⚠️"
+    p.font.size = Pt(18)
+
+    # Bullet 2 Text
+    txBox = slide.shapes.add_textbox(Inches(1.3), Inches(6.4), Inches(11.5), Inches(0.5))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "性能隐患："
+    p.font.bold = True
+    p.font.size = Pt(16)
+    p.font.color.rgb = BLACK_TEXT
+    p.font.name = "Microsoft YaHei"
+    run = p.add_run()
+    run.text = "AI 生成的 SQL 逻辑存在冗余查询和未去重问题，大数据量下性能堪忧。"
+    run.font.bold = False
+    run.font.size = Pt(16)
+    run.font.color.rgb = BLACK_TEXT
+    run.font.name = "Microsoft YaHei"
+
+    # --- Footer ---
+    txBox = slide.shapes.add_textbox(Inches(12.0), Inches(7.0), Inches(1.0), Inches(0.4))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = "1 / 4"
+    p.font.size = Pt(12)
+    p.font.color.rgb = MUTED_TEXT
+    p.alignment = PP_ALIGN.RIGHT
+    p.font.name = "Microsoft YaHei"

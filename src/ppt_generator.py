@@ -433,46 +433,145 @@ def sanitize_text(text: Any) -> Any:
     # Filter text to keep only safe characters
     return "".join(c for c in text if is_safe(c))
 
+class NullProxy:
+    """A 'Black Hole' object that swallows all calls, attributes, and items to prevent crashes."""
+    def __getattr__(self, name): return self
+    def __setattr__(self, name, value): pass
+    def __call__(self, *args, **kwargs): return self
+    def __getitem__(self, key): return self
+    def __setitem__(self, key, value): pass
+    def __len__(self): return 0
+    def __iter__(self): return iter([])
+    def __bool__(self): return False
+    def __repr__(self): return "<NullProxy>"
+
 class SafeProxy:
     """A proxy object to intercept and fix common python-pptx AI errors."""
     def __init__(self, target):
         object.__setattr__(self, "_target", target)
 
+    def _unwrap(self, val):
+        if hasattr(val, "_target") and "SafeProxy" in str(type(val)):
+            return val._target
+        # Only recurse on standard JSON-like structures that AI commonly outputs
+        if type(val) in (list, tuple):
+            return type(val)(self._unwrap(x) for x in val)
+        if type(val) is dict:
+            return {k: self._unwrap(v) for k, v in val.items()}
+        # Treat other subclasses (like RGBColor) as leaf values
+        return val
+
     def __getattr__(self, name):
-        if name == "background" and hasattr(self._target, "fill"):
-            return self._target.fill.background
-        attr = getattr(self._target, name)
-        if hasattr(attr, "__dict__") or "pptx." in str(type(attr)):
-            return SafeProxy(attr)
-        return attr
+        if self._target is None:
+            return NullProxy()
+        
+        # ── 1. Specific Smart Path Mappings ──
+        # Fix: text_frame.alignment -> paragraphs[0].alignment
+        if name == "alignment" and "TextFrame" in str(type(self._target)):
+            try: return SafeProxy(self._target.paragraphs[0].alignment)
+            except: pass
+        if name == "font" and "TextFrame" in str(type(self._target)):
+            try: return SafeProxy(self._target.paragraphs[0].font)
+            except: pass
+        
+        # ── 2. Standard Native Access with Auto-Healing ──
+        try:
+            # Special case for 'background' to 'fill.background' (common in AI)
+            if name == "background" and hasattr(self._target, "fill"):
+                return SafeProxy(self._target.fill.background)
+            
+            # ATTEMPT ACCESS
+            try:
+                attr = getattr(self._target, name)
+            except (AttributeError, TypeError, ValueError):
+                # AUTO-HEALING: fill.fore_color fails if .solid() wasn't called
+                if name == "fore_color" and "Fill" in str(type(self._target)):
+                    try:
+                        self._target.solid()
+                        attr = getattr(self._target, name)
+                    except: return NullProxy()
+                elif name == "rgb" and "Color" in str(type(self._target)):
+                    # Fix: If accessing .rgb directly on something that has fore_color
+                    try: return SafeProxy(self._target.fore_color.rgb)
+                    except: return NullProxy()
+                else: return NullProxy()
+
+            if hasattr(attr, "__dict__") or "pptx." in str(type(attr)):
+                return SafeProxy(attr)
+            return attr
+        except (AttributeError, TypeError, ValueError, KeyError):
+            # ── 3. Silent Fallback (Null Object Pattern) ──
+            # Returns a NullProxy instead of crashing, allowing script to finish
+            print(f"WARNING: Hallucination or sequence error! Skipping '{name}' on {type(self._target)}")
+            return NullProxy()
 
     def __setattr__(self, name, value):
+        if self._target is None:
+            return
         # Sanitize text assignments to prevent XML corruption
         if name == "text" and isinstance(value, str):
             value = sanitize_text(value)
-        setattr(self._target, name, value)
+        # Unwrap if the value is another proxy (e.g. chart_data = other_proxy)
+        try:
+            setattr(self._target, name, self._unwrap(value))
+        except (AttributeError, TypeError):
+            # If the attribute doesn't exist for assignment, just skip it (Resilience)
+            pass
 
-    def __call__(self, *args, **kwargs):
-        res = self._target(*args, **kwargs)
-        if hasattr(res, "__dict__") or "pptx." in str(type(res)):
-            return SafeProxy(res)
-        return res
+    def __setitem__(self, key, value):
+        if self._target is None: return
+        try:
+            self._target[key] = self._unwrap(value)
+        except: pass
 
     def __getitem__(self, key):
-        res = self._target[key]
-        if hasattr(res, "__dict__") or "pptx." in str(type(res)):
-            return SafeProxy(res)
-        return res
+        if self._target is None: return NullProxy()
+        try:
+            res = self._target[key]
+            if hasattr(res, "__dict__") or "pptx." in str(type(res)):
+                return SafeProxy(res)
+            return res
+        except: return NullProxy()
+
+    def __call__(self, *args, **kwargs):
+        if self._target is None: return NullProxy()
+        try:
+            # Unwrap all incoming arguments so the native pptx library can handle them
+            u_args = [self._unwrap(a) for a in args]
+            u_kwargs = {k: self._unwrap(v) for k, v in kwargs.items()}
+            res = self._target(*u_args, **u_kwargs)
+            if hasattr(res, "__dict__") or "pptx." in str(type(res)):
+                return SafeProxy(res)
+            return res
+        except: return NullProxy()
+
+    def __bool__(self):
+        if self._target is None: return False
+        return bool(self._target)
+
+    def __contains__(self, item):
+        if self._target is None: return False
+        try: return self._unwrap(item) in self._target
+        except: return False
 
     def __len__(self):
         return len(self._target)
 
     def __iter__(self):
-        for item in self._target:
-            if hasattr(item, "__dict__") or "pptx." in str(type(item)):
-                yield SafeProxy(item)
-            else:
-                yield item
+        if self._target is None: return iter([])
+        try:
+            # Try to start iteration
+            it = iter(self._target)
+            for item in it:
+                if hasattr(item, "__dict__") or "pptx." in str(type(item)):
+                    yield SafeProxy(item)
+                else:
+                    yield item
+        except TypeError:
+            # ── Smart Fallback: Non-iterable object (like DataLabels) ──
+            # If the AI thinks it's a sequence but it's not, just skip the loop
+            print(f"WARNING: Tried to iterate over non-iterable {type(self._target)}. Skipping loop.")
+            return # Yields nothing (empty generator)
 
 class ShapesProxy(SafeProxy):
     def _to_emu(self, val):
@@ -547,7 +646,37 @@ class SlidesListProxy:
 
 
 def _patch_common_errors(code: str) -> str:
-    """Auto-fix common mistakes the AI makes in generated python-pptx code."""
+    """Auto-fix common mistakes and syntax errors the AI makes in generated code."""
+    # ── 1. Local Syntax Fixes: 'Peeled Patching' for string literals ──
+    new_lines = []
+    for line in code.split('\n'):
+        if not line.strip() or '"""' in line or "'''" in line:
+            new_lines.append(line)
+            continue
+        
+        # Heuristic: Remove all valid, paired strings first to find the culprit
+        # We use non-greedy matching to leave lone quotes alone
+        stripped = re.sub(r'"[^"]*"', '', line)
+        stripped = re.sub(r"'[^']*'", '', stripped)
+        
+        # If we have a lone quote leftover, append it at the end
+        if '"' in stripped and not line.rstrip().endswith('\\'):
+            line = line + '"'
+        elif "'" in stripped and not line.rstrip().endswith('\\'):
+            line = line + "'"
+            
+        new_lines.append(line)
+        
+    code = '\n'.join(new_lines)
+
+    # ── 2. Global Syntax Fix: Balanced Parentheses (Script-wide) ──
+    # If the script was truncated, close ALL remaining parentheses at the very end
+    open_p = code.count('(')
+    close_p = code.count(')')
+    if open_p > close_p:
+        code += ')' * (open_p - close_p)
+
+    # ── 3. Structural Fixes ──
     # .line.background() -> .line.fill.background()
     code = re.sub(r'\.line\.background\(\)', '.line.fill.background()', code)
     # .line.no_fill() -> .line.fill.background()
@@ -585,13 +714,18 @@ def _exec_script(script: str) -> tuple[bool, str]:
             
             # Prepare execution environment
             from pptx import Presentation as RealPresentation
+            from pptx.chart.data import CategoryChartData as RealCCD
 
             def ProxyPresentation(*args, **kwargs):
                 return PptxProxy(RealPresentation(*args, **kwargs))
 
+            def ProxyCategoryChartData(*args, **kwargs):
+                return SafeProxy(RealCCD(*args, **kwargs))
+
             exec_globals = {
                 "__builtins__": __builtins__, 
                 "Presentation": ProxyPresentation,
+                "CategoryChartData": ProxyCategoryChartData,
                 "re": re, 
                 "traceback": traceback
             }
